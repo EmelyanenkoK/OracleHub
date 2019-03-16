@@ -283,9 +283,9 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
     throw_if(36, balance < min_fee_per_operation);   
     balance -= min_fee_per_operation;
     oracle_seqno += 1;
-    accept_message ();
     if (op == (128 + 1) )    { ;; provide data
       int internal_query_id = cs~load_uint(96);
+      accept_message ();
       (slice request_data, int request_found?) = requests_dict~udict::delete_get?(96, internal_query_id);
       ifnot(request_found?) {
         balance = max(0, balance - fail_fee);
@@ -294,6 +294,7 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
         save_data(owner_pubkey, owner_seqno, oracle_dict, requests_dict);
       } else {
         (int oracle_id, int return_amount, int fee, int expiration_time, slice requester_address) = unpack_request_data(request_data);
+        accept_message ();
         send_response_msg(requester_address, return_amount, cs);
         balance += fee;
         total_request_num += 1; 
