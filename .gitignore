@@ -1,0 +1,13 @@
+*.boc
+*.pub
+*.pk
+fift
+func
+Asm.fif
+Color.fif
+Fift.fif
+GetOpt.fif
+Lisp.fif
+Lists.fif
+Stack.fif
+TonUtil.fif
