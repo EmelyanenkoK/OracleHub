@@ -4,7 +4,6 @@
 (cell, (slice, int)) ~udict::delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDELGET" "NULLSWAPIFNOT";
 (cell, ()) ~udict::set(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTUSET";
 (slice) empty_slice () asm "NEWC" "ENDC" "CTOS";
-int [0] (tuple) asm "CAR";
 
 
 (int, int, cell, cell) load_data () inline {
