@@ -1,0 +1,29 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+$1 parse-int =: public_key
+
+
+"hub.fif" include <s =: contract_code
+// we use `now` here to make contract_storage and thus address unique
+// it will be overwritten upon processing of init message
+<b public_key 256 u, 0 32 u, dictnew dict, dictnew dict, now 32 u, b> =: contract_storage
+0 =: wc
+
+<b b{00110} s, <b contract_code s, b> ref, contract_storage ref, b>
+dup =: state_init
+dup hashu wc swap 2constant hub_addr
+."OracleHub address = " hub_addr .addr cr
+
+."Non-bounceable address (for init): " hub_addr 7 .Addr cr
+."Bounceable address (for later access): " hub_addr 6 .Addr cr
+
+
+<b b> <s =: init_message 
+
+<b b{1000100} s, hub_addr addr, b{000010} s, state_init <s s, b{0} s, init_message s, b>
+2 boc+>B
+"hub-init.boc" tuck B>file
+."(Saved oracle hub contract creating query to file " type .")" cr
+

@@ -1,0 +1,15 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+$1 parse-int =: oracle_id
+$2 parse-int =: query_id
+$3 =: request
+
+
+2 =: op
+<b op 32 u, query_id 64 u, oracle_id 32 u, request $, b>
+2 boc+>B
+"send_request.boc" tuck B>file
+."(Saved data request query for oracle " type .")" cr
+

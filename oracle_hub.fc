@@ -1,0 +1,350 @@
+(slice, int, int) udict::get_max(cell dict, int key_len) asm "DICTUMAX" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(slice, int) udict::get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUGET" "NULLSWAPIFNOT";
+(cell, ()) ~udict::set_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTUSETREF";
+(cell, (slice, int)) ~udict::delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDELGET" "NULLSWAPIFNOT";
+(cell, ()) ~udict::set(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTUSET";
+(slice) empty_slice () asm "NEWC" "ENDC" "CTOS";
+
+(int, int, cell, cell) load_data () inline {
+  var cs = get_data().begin_parse();
+  (int pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) = 
+  (cs~load_uint(256), cs~load_uint(32), cs~load_dict(), cs~load_dict());
+  return (pubkey, owner_seqno, oracle_dict, requests_dict); 
+}
+
+() save_data (int pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) impure inline {
+  cell storage = begin_cell()
+                             .store_uint(pubkey, 256)
+                             .store_uint(owner_seqno, 32)
+                             .store_dict(oracle_dict)
+                             .store_dict(requests_dict)
+                 .end_cell();
+  set_data(storage);
+}
+
+slice pack_oracle_data(int public_key, int balance, int price_per_request, int timeout, int seqno, int total_request_num, int success_request_num) inline {
+  return begin_cell()
+                     .store_uint(public_key, 256)
+                     .store_grams(balance)
+                     .store_grams(price_per_request)
+                     .store_uint(timeout, 16)
+                     .store_uint(seqno, 32)
+                     .store_uint(total_request_num, 32)
+                     .store_uint(success_request_num, 32)
+         .end_cell().begin_parse();
+}
+(int, int, int, int, int, int, int) unpack_oracle_data (slice data) inline {
+  return (data~load_uint(256), data~load_grams(), data~load_grams(), data~load_uint(16), data~load_uint(32), data~load_uint(32), data~load_uint(32));
+}
+
+slice pack_request_data (int oracle_id, int return_grams, int fee, int expiration_time, slice requester_address) inline {
+  return begin_cell()
+                     .store_uint(oracle_id, 32)
+                     .store_grams(return_grams)
+                     .store_grams(fee)
+                     .store_uint(expiration_time, 32)
+                     .store_slice(requester_address)
+         .end_cell().begin_parse();  
+}
+
+(int, int, int, int, slice) unpack_request_data (slice data) inline {
+  return (data~load_uint(32), data~load_grams(), data~load_grams(), data~load_uint(32), data);
+}
+
+() send_response_msg (slice address, int sum, slice message) impure inline {
+  var msg = begin_cell()
+                        .store_uint (0x18, 6)
+                        .store_slice(address)
+                        .store_grams(sum)
+                        .store_uint (0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+                        .store_uint (0, 32)
+                        .store_slice (message)
+           .end_cell();
+  send_raw_message(msg, 2);
+}
+
+() log_request (int oracle_id, int internal_query_id, slice message) impure inline {
+  var requst_cell = begin_cell().store_slice(message).end_cell();
+  var msg = begin_cell()
+                        .store_uint (3, 2) ;; ext_out_msg_info$11 src:MsgAddressInt ()
+                        .store_slice(my_address())
+                        .store_uint (1, 2)
+                        .store_uint (32, 9) ;; 32 bit in oracle_id
+                        .store_uint(oracle_id, 32)
+                        .store_uint(0, 64 + 32 + 2) ;; created_lt, created_at, init:Maybe, body:Either
+                        .store_uint(internal_query_id, 96)
+                        .store_ref(requst_cell)
+           .end_cell();
+  send_raw_message(msg, 2);
+}
+
+() log_oracle_id (int oracle_id, int public_key) impure inline {
+  var msg = begin_cell()
+                        .store_uint (3, 2) ;; ext_out_msg_info$11 src:MsgAddressInt ()
+                        .store_slice(my_address())
+                        .store_uint (1, 2)
+                        .store_uint (256, 9) ;; 256 bit in public_key
+                        .store_uint(public_key, 256)
+                        .store_uint(oracle_id, 64 + 32 + 2 + 32) ;; created_lt, created_at, init:Maybe, body:Either
+            .end_cell();
+  send_raw_message(msg, 2);
+}
+
+(int) register_oracle(int pubkey, int price_per_request, int timeout, int msg_value) impure inline {
+  (int owner_pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) = load_data();
+  var (_, prev_index, found?) = oracle_dict.udict::get_max(32);
+  ifnot(found?) {
+    prev_index = -1;
+  }
+  int registration_fee = 10000000;
+  slice oracle_data = pack_oracle_data(pubkey, msg_value - registration_fee, price_per_request, timeout, 0, 0, 0);
+  int oracle_index = prev_index + 1;
+  oracle_dict~udict::set(32, oracle_index, oracle_data);
+  save_data (owner_pubkey, owner_seqno, oracle_dict, requests_dict);
+  return oracle_index;
+}
+
+() top_up_oracle(int oracle_id, int msg_value) impure inline {
+  (int owner_pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) = load_data();
+  var (oracle_data, found?) = oracle_dict.udict::get?(32, oracle_id);
+  throw_unless(57, found?);
+  int top_up_fee = 10000000;
+  (int pubkey, int balance, int price_per_request, int timeout, int oracle_seqno, int total_request_num, int success_request_num) =
+    unpack_oracle_data(oracle_data);
+  oracle_data = pack_oracle_data(pubkey, balance + msg_value - top_up_fee, price_per_request, timeout, oracle_seqno, total_request_num, success_request_num);
+  oracle_dict~udict::set(32, oracle_id, oracle_data);
+  save_data (owner_pubkey, owner_seqno, oracle_dict, requests_dict);
+}
+
+(int) pack_internal_query_id( int query_id, slice s_addr) {
+  int addr_hash = (slice_hash(s_addr) >> 224);
+  return (addr_hash << 64 ) + query_id;
+}
+
+() consider_request(int oracle_id, int internal_query_id, int msg_value, slice requester_address) impure inline {
+  (int owner_pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) = load_data();
+  (slice oracle_data, int oracle_found?) = oracle_dict.udict::get?(32, oracle_id);
+  throw_unless(50, oracle_found?);
+  (int public_key, int balance, int price_per_request, int timeout, int oracle_seqno, int total_request_num, int success_request_num) =
+    unpack_oracle_data(oracle_data);
+  int hub_fee = 10000000;
+  msg_value -= price_per_request + hub_fee ;
+  throw_if(51, msg_value < 0);
+  requests_dict~udict::set( 96, internal_query_id, 
+                                pack_request_data(oracle_id, msg_value, price_per_request, now() + timeout, requester_address) );
+  save_data (owner_pubkey, owner_seqno, oracle_dict, requests_dict);  
+}
+
+
+(int) withdraw_request(int internal_query_id) impure inline {
+  (int owner_pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) = load_data();
+  (slice request_data, int request_found?) = requests_dict~udict::delete_get?(96, internal_query_id);
+  throw_unless(52, request_found?);
+  (int oracle_id, int return_grams, int fee, int expiration_time, slice requester_address) = unpack_request_data(request_data);
+  throw_unless(53, now() > expiration_time);
+  return_grams = return_grams + fee;
+  (slice oracle_data, int oracle_found?) = oracle_dict.udict::get?(32, oracle_id);  
+  (int public_key, int balance, int price_per_request, int timeout, int oracle_seqno, int total_request_num, int success_request_num) =
+    unpack_oracle_data(oracle_data);
+  int withdraw_fee = 25000000;
+  if(balance >= withdraw_fee) {
+    balance -= withdraw_fee;
+  } else {
+    balance = 0;
+    if(return_grams > withdraw_fee) {
+      return_grams -= withdraw_fee;
+    } else {
+      return_grams = 0;
+    }
+  }
+  total_request_num += 1;
+  oracle_data = pack_oracle_data(public_key, balance, price_per_request, timeout, oracle_seqno, total_request_num, success_request_num);
+  oracle_dict~udict::set(32, oracle_id, oracle_data);
+  save_data (owner_pubkey, owner_seqno, oracle_dict, requests_dict);  
+  return return_grams;
+}
+
+(cell, ()) ~remove_expired(cell requests_dict, int query_id, int bound) inline {
+  (slice request_data, int request_found?) = requests_dict~udict::delete_get?(96, query_id);
+  throw_unless(56, request_found?);
+  (int oracle_id, int return_grams, int fee, int expiration_time, slice requester_address) = unpack_request_data(request_data);
+  throw_unless(53, bound > expiration_time);
+  return (requests_dict, ());  
+}
+
+() recv_internal (int msg_value, cell in_msg_cell, slice in_msg) impure {
+  var cs = in_msg_cell.begin_parse();
+  var flags = cs~load_uint(4);  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
+  if (flags & 1) {
+    ;; ignore all bounced messages
+    return ();
+  }
+  if (in_msg.slice_data_empty?()) {
+    ifnot(in_msg.slice_refs_empty?()) {
+      in_msg = in_msg~load_ref().begin_parse();
+    }
+  } 
+  if (in_msg.slice_data_empty?()) {
+    return (); ;; Need this because  "error: `if` and `else` branches should both return or both not return"
+  }
+  int op = in_msg~load_uint(32);
+  if(op == 0) {
+    return(); ;; simple money transfer
+  }
+
+  if(op == 1) { ;; register_oracle
+    int pubkey = in_msg~load_uint(256);
+    int price_per_request = in_msg~load_grams();
+    int timeout = in_msg~load_uint(16);
+    int oracle_id = register_oracle(pubkey, price_per_request, timeout, msg_value);
+    log_oracle_id(oracle_id, pubkey);
+    return ();
+  }
+  if(op == 2) { ;; get_data
+    (int query_id, int oracle_id) = (in_msg~load_uint(64), in_msg~load_uint(32));  
+    slice s_addr = cs~load_msg_addr();
+    int internal_query_id = pack_internal_query_id(query_id, s_addr);
+    consider_request(oracle_id, internal_query_id, msg_value, s_addr); ;; fails if something is wrong
+    log_request(oracle_id, internal_query_id, in_msg);
+    return ();
+  }
+  if(op == 3) { ;; top_up_oracle
+    int oracle_id = in_msg~load_uint(32);    
+    top_up_oracle(oracle_id, msg_value);
+    return ();
+  }
+  if(op == 4) { ;; claim_unprovided_data
+    (int query_id, int oracle_id) = (in_msg~load_uint(64), in_msg~load_uint(32));  
+    slice s_addr = cs~load_msg_addr();
+    int internal_query_id = pack_internal_query_id(query_id, s_addr);
+    int return_amount = withdraw_request(internal_query_id);
+    slice return_message = begin_cell()
+                                       .store_uint(4 & 2147483648, 32) ;; 2147483648 = 2^31
+                                       .store_uint(query_id, 64)
+                           .end_cell().begin_parse();
+    send_response_msg(s_addr, return_amount, return_message);
+    return ();
+  }
+}
+
+() recv_external(slice in_msg) impure {
+  (int owner_pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) = load_data();
+  ifnot(owner_seqno) {
+    save_data (owner_pubkey, 1, oracle_dict, requests_dict);
+    accept_message ();
+    return ();
+  }
+  slice signature = in_msg~load_bits(512);
+  slice cs = in_msg;
+  int provided_seqno = cs~load_uint(32);
+  int op = cs~load_uint(8);
+  if (op < 128)  {
+    throw_unless(34, check_signature(slice_hash(in_msg), signature, owner_pubkey));
+    throw_unless(35, provided_seqno == owner_seqno);  
+    accept_message();
+    owner_seqno += 1;
+    save_data(owner_pubkey, owner_seqno, oracle_dict, requests_dict);
+    commit();
+    if(op == 1) { ;; admin_withdraw
+      int amount = cs~load_grams();
+      slice dest = cs~load_msg_addr();
+      send_response_msg(dest, amount, empty_slice());
+    }  
+    if(op == 2) { ;; remove_expired
+      int timestamp = now();
+      int stop? = 0;
+      do {
+        stop? = (cs.slice_bits() > 96);
+        ifnot(stop?) {
+          int next_id = cs~load_uint(96);
+          requests_dict~remove_expired(next_id, timestamp);
+        } else {
+          if(cs.slice_refs() > 0) {
+            stop? = 0;
+            cs = cs~load_ref().begin_parse();
+          }
+        }
+      } until (stop?);
+      save_data(owner_pubkey, owner_seqno, oracle_dict, requests_dict);
+      ;; return ();
+    }  
+  } else {
+    int oracle_id = cs~load_uint(32);
+    (slice oracle_data, int oracle_found?) = oracle_dict.udict::get?(32, oracle_id);
+    throw_unless(50, oracle_found?);
+    (int oracle_pubkey, int balance, int price_per_request, int timeout, int oracle_seqno, int total_request_num, int success_request_num) =
+      unpack_oracle_data(oracle_data);
+    throw_unless(34, check_signature(slice_hash(in_msg), signature, oracle_pubkey));
+    throw_unless(35, provided_seqno == oracle_seqno);    
+    int min_fee_per_operation = 10000000;
+    int fail_fee = 100000000;
+    throw_if(36, balance < min_fee_per_operation);   
+    balance -= min_fee_per_operation;
+    oracle_seqno += 1;
+    accept_message ();
+    if (op == (128 + 1) )    { ;; provide data
+      int internal_query_id = cs~load_uint(96);
+      (slice request_data, int request_found?) = requests_dict~udict::delete_get?(96, internal_query_id);
+      ifnot(request_found?) {
+        balance = max(0, balance - fail_fee);
+        oracle_data = pack_oracle_data(oracle_pubkey, balance, price_per_request, timeout, oracle_seqno, total_request_num, success_request_num);
+        oracle_dict~udict::set(32, oracle_id, oracle_data);
+        save_data(owner_pubkey, owner_seqno, oracle_dict, requests_dict);
+      } else {
+        (int oracle_id, int return_amount, int fee, int expiration_time, slice requester_address) = unpack_request_data(request_data);
+        send_response_msg(requester_address, return_amount, cs);
+        balance += fee;
+        total_request_num += 1; 
+        success_request_num += 1;
+        oracle_data = pack_oracle_data(oracle_pubkey, balance, price_per_request, timeout, oracle_seqno, total_request_num, success_request_num);
+        oracle_dict~udict::set(32, oracle_id, oracle_data);
+        save_data(owner_pubkey, owner_seqno, oracle_dict, requests_dict);
+      }
+
+    }
+    if (op == (128 + 2) )    {
+      int amount = cs~load_grams();
+      slice dest = cs~load_msg_addr();
+      int withdraw_fee = 10000000;
+      if(amount + withdraw_fee > balance) {
+        balance = max(0, balance - fail_fee);
+        oracle_data = pack_oracle_data(oracle_pubkey, balance, price_per_request, timeout, oracle_seqno, total_request_num, success_request_num);
+        oracle_dict~udict::set(32, oracle_id, oracle_data);
+        save_data(owner_pubkey, owner_seqno, oracle_dict, requests_dict);
+      } else {
+        balance -= amount + withdraw_fee;
+        oracle_data = pack_oracle_data(oracle_pubkey, balance, price_per_request, timeout, oracle_seqno, total_request_num, success_request_num);
+        oracle_dict~udict::set(32, oracle_id, oracle_data);
+        save_data(owner_pubkey, owner_seqno, oracle_dict, requests_dict);
+        commit();
+        send_response_msg(dest, amount, empty_slice());
+      }
+    }
+  
+  }
+  
+}
+
+(int, int, int, int, slice) get_request (int internal_query_id) method_id {
+  (int owner_pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) = load_data();
+  (slice request_data, int request_found?) = requests_dict.udict::get?(96, internal_query_id);
+  ifnot(request_found?) {
+    return (-1, -1, -1, -1, begin_cell().end_cell().begin_parse());
+  }
+  return unpack_request_data(request_data);
+}
+
+(int, int, int, int, int, int, int) get_oracle (int oracle_id) method_id {
+  (int owner_pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) = load_data();
+  (slice oracle_data, int oracle_found?) = oracle_dict.udict::get?(32, oracle_id);
+  ifnot(oracle_found?) {
+    return (-1, -1, -1, -1, -1, -1, -1);
+  }
+  return unpack_oracle_data(oracle_data);
+}
+
+(int) get_owner_seqno() method_id {
+  (int owner_pubkey, int owner_seqno, cell oracle_dict, cell requests_dict) = load_data();
+  return owner_seqno;
+}
+

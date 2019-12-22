@@ -1,0 +1,26 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+$1 parse-int =: oracle_id
+$2 parse-int =: seqno
+$3 parse-int =: query_id
+$4 =: response
+$5 =: file-base
+true =: bounce
+true =: allow-bounce
+$6 bounce parse-load-address allow-bounce and =: bounce 2=: hub_addr
+
+
+129 =: op
+
+
+<b seqno 32 u, op 8 u, oracle_id 32 u, query_id 96 u, response $, b> =: message_body
+file-base +".pk" load-keypair nip constant wallet_pk
+message_body hashu wallet_pk ed25519_sign_uint =: signature
+
+<b b{1000100} s, hub_addr addr, 0 Gram, b{00} s, signature B, message_body <s s, b>
+2 boc+>B
+"response-query.boc" tuck B>file
+."(Saved response query to file " type .")" cr
+

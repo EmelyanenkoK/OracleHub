@@ -1,0 +1,24 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <filename-base>" cr
+  ."Creates a new keypair, with private key saved to or loaded from <filename-base>.pk" cr
+  ."('new-keypair.pk' by default), and public key saved to <filename-base>.pub" cr
+  1 halt
+} : usage
+
+def? $1 { @' $1 } { "new-keypair" } cond constant file-base
+
+$# 1 > ' usage if
+$# 0 > { 1 $() dup "--help" $= swap "-h" $= or ' usage if } if
+
+file-base +".pk" load-generate-keypair
+swap dup file-base +".pub" B>file
+."Your public key is : " 256 B>u@ . cr
+
+."===========================================================" cr
+file-base +".pub" type ." may be shared with counterparties," cr
+file-base +".pk"  type ." SHOULD BE KEPT SAFE AND PRIVATE," cr
+."===========================================================" cr
+
