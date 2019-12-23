@@ -14,5 +14,5 @@ How it works?
 OracleHub contract is deployed on:
 `0:bc2b1afd7b59a288293e2b72d43ed02c50c3421f09c46ac34544e5a3f4b6c152`
 
-#O racle Server
+# Oracle Server
 Instruction for setup your own oracle may be found in `./oracle_server`
