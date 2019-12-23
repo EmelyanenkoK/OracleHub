@@ -4,6 +4,8 @@
 (cell, (slice, int)) ~udict::delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDELGET" "NULLSWAPIFNOT";
 (cell, ()) ~udict::set(cell dict, int key_len, int index, slice value) asm(value index dict key_len) "DICTUSET";
 (slice) empty_slice () asm "NEWC" "ENDC" "CTOS";
+int [0] (tuple) asm "CAR";
+
 
 (int, int, cell, cell) load_data () inline {
   var cs = get_data().begin_parse();
@@ -96,7 +98,7 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
   ifnot(found?) {
     prev_index = -1;
   }
-  int registration_fee = 10000000;
+  int registration_fee = 25000000;
   slice oracle_data = pack_oracle_data(pubkey, msg_value - registration_fee, price_per_request, timeout, 0, 0, 0);
   int oracle_index = prev_index + 1;
   oracle_dict~udict::set(32, oracle_index, oracle_data);
@@ -276,8 +278,8 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
       unpack_oracle_data(oracle_data);
     throw_unless(34, check_signature(slice_hash(in_msg), signature, oracle_pubkey));
     throw_unless(35, provided_seqno == oracle_seqno);    
-    int min_fee_per_operation = 10000000;
-    int fail_fee = 100000000;
+    int min_fee_per_operation = 25000000;
+    int fail_fee = min_fee_per_operation * 5;
     throw_if(36, balance < min_fee_per_operation);   
     balance -= min_fee_per_operation;
     oracle_seqno += 1;
