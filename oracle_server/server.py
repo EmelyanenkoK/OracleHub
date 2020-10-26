@@ -8,7 +8,7 @@ import nacl.signing
 from time import sleep
 
 
-oracle_hub_address = "0:bc2b1afd7b59a288293e2b72d43ed02c50c3421f09c46ac34544e5a3f4b6c152"
+oracle_hub_address = "0:2d627b20d344d9244a99171083a4598d9576bbcd7746945f61927a23d0317591"
 delay = 20
 last_checked_at = "./last_checked"
 
@@ -17,7 +17,7 @@ def resolve_redirect(host, path):
   r = requests.get('https://%s%s'%(host, path))
   return r.url
 
-client = GraphQLClient(resolve_redirect('testnet.ton.dev', '/graphql'))
+client = GraphQLClient(resolve_redirect('net.ton.dev', '/graphql'))
 
 
 
@@ -37,8 +37,8 @@ def set_oracle_data(seqno, tm):
 
 def prepare_oracle_addr(oracle_id):
   return ":%.8d"%oracle_id
-  
-  
+
+
 def add_header_to_response(query_id, oracle_id, seqno, response):
   # <b seqno 32 u, op 8 u, oracle_id 32 u,
   header = Cell()
@@ -52,8 +52,8 @@ def add_header_to_response(query_id, oracle_id, seqno, response):
     header.concatenate(response)
   return header
 
-  
-  
+
+
 def sign_message(signing_key, cell):
       # 512 signature len
       # 279 message header len: <b b{1000100} s, wallet_addr addr, 0 Gram, b{00} s,
@@ -81,12 +81,17 @@ def compose_message(signed_result):
   return message_cell
 
 
+mutation_template = '''
+mutation {
+  postRequests(requests:[{id:"%(request_id)s",body:"%(base64_boc)s",expireAt:%(expire_at)d}])
+}
+'''
+
 def send_boc(boc):
-  payload_template = '{"jsonrpc":"2.0", "id": %(request_id)s, "method": "sendboc", "params": ["%(boc)s"]}'
-  data = {'request_id':randint(0,2**32), 'boc': codecs.decode(codecs.encode(boc,'base64'),'utf8').replace('\n','')}
-  print(payload_template%data)
-  r = requests.post('https://toncenter.com/api/test/v1', data=payload_template%data)
-  print(r, r.status_code, r.text)
+  data = {'request_id':str(randint(0,2**32)), 'base64_boc': codecs.decode(codecs.encode(boc,'base64'),'utf8').replace('\n',''), 'expire_at':1000*(time.time()+3600)}
+  print(mutation_template%data)
+  r = json.loads(client.execute(mutation_template%data))
+  print("Result:", r)
 
 query_template = '''
 query {
