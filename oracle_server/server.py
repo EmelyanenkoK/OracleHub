@@ -5,8 +5,12 @@ import requests
 import codecs
 from random import randint
 import nacl.signing
-from time import sleep
+from time import sleep, time
 
+default_network_params = {
+  "hub": "0:2d627b20d344d9244a99171083a4598d9576bbcd7746945f61927a23d0317591",
+  "endpoint": 'net.ton.dev'
+}
 
 oracle_hub_address = "0:2d627b20d344d9244a99171083a4598d9576bbcd7746945f61927a23d0317591"
 delay = 20
@@ -17,7 +21,6 @@ def resolve_redirect(host, path):
   r = requests.get('https://%s%s'%(host, path))
   return r.url
 
-client = GraphQLClient(resolve_redirect('net.ton.dev', '/graphql'))
 
 
 
@@ -67,7 +70,7 @@ def sign_message(signing_key, cell):
       signed_cell.concatenate(cell)
       return signed_cell
 
-def compose_message(signed_result):
+def compose_message(oracle_hub_address, signed_result):
   message_cell = Cell()
   #<b b{1000100} s, hub_addr addr, 0 Gram, b{00} s, 
   message_cell.data.put_arbitrary_uint( 0b1000, 4)
@@ -87,11 +90,9 @@ mutation {
 }
 '''
 
-def send_boc(boc):
-  data = {'request_id':str(randint(0,2**32)), 'base64_boc': codecs.decode(codecs.encode(boc,'base64'),'utf8').replace('\n',''), 'expire_at':1000*(time.time()+3600)}
-  print(mutation_template%data)
+def send_boc(client, boc):
+  data = {'request_id':str(randint(0,2**32)), 'base64_boc': codecs.decode(codecs.encode(boc,'base64'),'utf8').replace('\n',''), 'expire_at':1000*(time()+3600)}
   r = json.loads(client.execute(mutation_template%data))
-  print("Result:", r)
 
 query_template = '''
 query {
@@ -103,13 +104,14 @@ query {
 }
 '''
 
-def run_server(oracle_id, oracle_private_key, handler):
+def run_server(network_params, oracle_id, oracle_private_key, handler):
   signing_key = nacl.signing.SigningKey(oracle_private_key)
   while True:
     seqno, last_known = get_oracle_data()
-    query = query_template % {'contract_addr': oracle_hub_address, 
+    query = query_template % {'contract_addr': network_params["hub"], 
                               'oracle_addr': prepare_oracle_addr(oracle_id), 
                               'last_known': last_known}
+    client = GraphQLClient(resolve_redirect(network_params["endpoint"], '/graphql'))
     result = json.loads(client.execute(query))
     if 'data' in result and 'messages' in result['data']:
       if len(result['data']['messages']):
@@ -118,17 +120,13 @@ def run_server(oracle_id, oracle_private_key, handler):
           created_at = m['created_at']
           body = codecs.decode(codecs.encode(body, 'utf8'), 'base64')
           request = deserialize_boc(body)
-          print(request)
           query_id, request.data.data = request.data.data[:96], request.data.data[96:] #TODO bad practice
-          print(request)
           result = handler(request)
           result_w_header = add_header_to_response(int.from_bytes(query_id, 'big'), oracle_id, seqno, result)
           seqno += 1
           signed_result = sign_message(signing_key, result_w_header)
-          out_msg = compose_message(signed_result)
-          print(out_msg)
-          send_boc(out_msg.serialize_boc(has_idx=False))
-          print(out_msg.serialize_boc(has_idx=False))
+          out_msg = compose_message(network_params["hub"],signed_result)
+          send_boc(client, out_msg.serialize_boc(has_idx=False))
           set_oracle_data(seqno, created_at)
           print("Processed query with id %s"%query_id.tobytes())
     sleep(delay)
