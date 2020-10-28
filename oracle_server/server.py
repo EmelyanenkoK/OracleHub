@@ -5,19 +5,20 @@ import requests
 import codecs
 from random import randint
 import nacl.signing
-from time import sleep
+from time import sleep, time
 
+default_network_params = {
+  "hub": "0:d1f41263f18e3b0e10a9bd531ba0df671a60141081273a2c81a110dd1f2afa5a",
+  "endpoint": 'net.ton.dev'
+}
 
-oracle_hub_address = "0:bc2b1afd7b59a288293e2b72d43ed02c50c3421f09c46ac34544e5a3f4b6c152"
-delay = 20
+delay = 12
 last_checked_at = "./last_checked"
-
 
 def resolve_redirect(host, path):
   r = requests.get('https://%s%s'%(host, path))
   return r.url
 
-client = GraphQLClient(resolve_redirect('testnet.ton.dev', '/graphql'))
 
 
 
@@ -37,8 +38,8 @@ def set_oracle_data(seqno, tm):
 
 def prepare_oracle_addr(oracle_id):
   return ":%.8d"%oracle_id
-  
-  
+
+
 def add_header_to_response(query_id, oracle_id, seqno, response):
   # <b seqno 32 u, op 8 u, oracle_id 32 u,
   header = Cell()
@@ -52,8 +53,8 @@ def add_header_to_response(query_id, oracle_id, seqno, response):
     header.concatenate(response)
   return header
 
-  
-  
+
+
 def sign_message(signing_key, cell):
       # 512 signature len
       # 279 message header len: <b b{1000100} s, wallet_addr addr, 0 Gram, b{00} s,
@@ -67,7 +68,7 @@ def sign_message(signing_key, cell):
       signed_cell.concatenate(cell)
       return signed_cell
 
-def compose_message(signed_result):
+def compose_message(oracle_hub_address, signed_result):
   message_cell = Cell()
   #<b b{1000100} s, hub_addr addr, 0 Gram, b{00} s, 
   message_cell.data.put_arbitrary_uint( 0b1000, 4)
@@ -81,12 +82,15 @@ def compose_message(signed_result):
   return message_cell
 
 
-def send_boc(boc):
-  payload_template = '{"jsonrpc":"2.0", "id": %(request_id)s, "method": "sendboc", "params": ["%(boc)s"]}'
-  data = {'request_id':randint(0,2**32), 'boc': codecs.decode(codecs.encode(boc,'base64'),'utf8').replace('\n','')}
-  print(payload_template%data)
-  r = requests.post('https://toncenter.com/api/test/v1', data=payload_template%data)
-  print(r, r.status_code, r.text)
+mutation_template = '''
+mutation {
+  postRequests(requests:[{id:"%(request_id)s",body:"%(base64_boc)s",expireAt:%(expire_at)d}])
+}
+'''
+
+def send_boc(client, boc):
+  data = {'request_id':str(randint(0,2**32)), 'base64_boc': codecs.decode(codecs.encode(boc,'base64'),'utf8').replace('\n',''), 'expire_at':1000*(time()+3600)}
+  r = json.loads(client.execute(mutation_template%data))
 
 query_template = '''
 query {
@@ -98,13 +102,14 @@ query {
 }
 '''
 
-def run_server(oracle_id, oracle_private_key, handler):
+def run_server(network_params, oracle_id, oracle_private_key, handler):
   signing_key = nacl.signing.SigningKey(oracle_private_key)
   while True:
     seqno, last_known = get_oracle_data()
-    query = query_template % {'contract_addr': oracle_hub_address, 
+    query = query_template % {'contract_addr': network_params["hub"], 
                               'oracle_addr': prepare_oracle_addr(oracle_id), 
                               'last_known': last_known}
+    client = GraphQLClient(resolve_redirect(network_params["endpoint"], '/graphql'))
     result = json.loads(client.execute(query))
     if 'data' in result and 'messages' in result['data']:
       if len(result['data']['messages']):
@@ -113,17 +118,13 @@ def run_server(oracle_id, oracle_private_key, handler):
           created_at = m['created_at']
           body = codecs.decode(codecs.encode(body, 'utf8'), 'base64')
           request = deserialize_boc(body)
-          print(request)
           query_id, request.data.data = request.data.data[:96], request.data.data[96:] #TODO bad practice
-          print(request)
           result = handler(request)
           result_w_header = add_header_to_response(int.from_bytes(query_id, 'big'), oracle_id, seqno, result)
           seqno += 1
           signed_result = sign_message(signing_key, result_w_header)
-          out_msg = compose_message(signed_result)
-          print(out_msg)
-          send_boc(out_msg.serialize_boc(has_idx=False))
-          print(out_msg.serialize_boc(has_idx=False))
+          out_msg = compose_message(network_params["hub"],signed_result)
+          send_boc(client, out_msg.serialize_boc(has_idx=False))
           set_oracle_data(seqno, created_at)
           print("Processed query with id %s"%query_id.tobytes())
     sleep(delay)
