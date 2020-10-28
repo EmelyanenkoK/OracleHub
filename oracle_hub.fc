@@ -196,6 +196,7 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
   if(op == 1) { ;; register_oracle
     int pubkey = in_msg~load_uint(256);
     int price_per_request = in_msg~load_grams();
+    throw_unless(58, price_per_request > 10000000);
     int timeout = in_msg~load_uint(16);
     int oracle_id = register_oracle(pubkey, price_per_request, timeout, msg_value);
     log_oracle_id(oracle_id, pubkey);
@@ -277,7 +278,7 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
       unpack_oracle_data(oracle_data);
     throw_unless(34, check_signature(slice_hash(in_msg), signature, oracle_pubkey));
     throw_unless(35, provided_seqno == oracle_seqno);    
-    int min_fee_per_operation = 25000000;
+    int min_fee_per_operation = 10000000;
     int fail_fee = min_fee_per_operation * 5;
     throw_if(36, balance < min_fee_per_operation);   
     balance -= min_fee_per_operation;
