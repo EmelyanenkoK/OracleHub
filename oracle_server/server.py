@@ -8,14 +8,12 @@ import nacl.signing
 from time import sleep, time
 
 default_network_params = {
-  "hub": "0:2d627b20d344d9244a99171083a4598d9576bbcd7746945f61927a23d0317591",
+  "hub": "0:d1f41263f18e3b0e10a9bd531ba0df671a60141081273a2c81a110dd1f2afa5a",
   "endpoint": 'net.ton.dev'
 }
 
-oracle_hub_address = "0:2d627b20d344d9244a99171083a4598d9576bbcd7746945f61927a23d0317591"
-delay = 20
+delay = 12
 last_checked_at = "./last_checked"
-
 
 def resolve_redirect(host, path):
   r = requests.get('https://%s%s'%(host, path))
