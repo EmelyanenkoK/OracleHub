@@ -1,0 +1,167 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+   <head>
+      <!-- basic -->
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
+      <!-- mobile metas -->
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <meta name="viewport" content="initial-scale=1, maximum-scale=1">
+      <!-- site metas -->
+      <title>OracleHub</title>
+      <meta name="keywords" content="">
+      <meta name="description" content="">
+      <meta name="author" content="">
+      <!-- bootstrap css -->
+      <link rel="stylesheet" href="css/bootstrap.min.css">
+      <!-- style css -->
+      <link rel="stylesheet" href="css/style.css">
+      <!-- Responsive-->
+      <link rel="stylesheet" href="css/responsive.css">
+      <!-- fevicon -->
+      <link rel="icon" href="images/fevicon.png" type="image/gif" />
+      <!-- Scrollbar Custom CSS -->
+      <link rel="stylesheet" href="css/jquery.mCustomScrollbar.min.css">
+      <!-- Tweaks for older IEs-->
+      <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/2.1.5/jquery.fancybox.min.css" media="screen">
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+      <link rel="stylesheet" href="css/slider.css">
+      <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script><![endif]-->
+   </head>
+   <!-- body -->
+   <body class="main-layout">
+      <!-- loader  -->
+      <div class="loader_bg">
+         <div class="loader"><img src="images/loading.gif" alt="#" /></div>
+      </div>
+      <!-- end loader -->
+      <!-- header -->
+      <header>
+         <!-- header inner -->
+         <div class="header hidden-sm-xs">
+            <div class="container-fluid">
+               <div class="row">
+                  <div class="col-xl-3 col-lg-3 col-md-3 col-sm-3 col logo_section">
+                     <div class="full">
+                        <div class="center-desk">
+                           <div class="logo">
+                              <a href="index.html"><strong>OracleHub</strong></a>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="col-xl-9 col-lg-9 col-md-9 col-sm-9">
+                     <div style="float:right;"> 
+                       <a style="color:#fff;">Live on FreeTON
+                        <span class="circle" style="position: absolute;width: 10px;height: 10px;border-radius: 5px;
+  background: #00ffaa;"></span>
+                       </a>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </header>
+      <!-- end header inner -->
+      <!-- end header -->
+      <!-- banner -->
+      <section class="banner_main" style="display:grid;">
+        <div class="row col-xl-9 col-lg-9 col-md-9 col-sm-9" style="color:#fff;font-size:x-large;">
+          <div  class="">
+            <span style="">
+              Live contract data via 
+              <a href="http://main.ton.dev/graphql">ton.dev graphql endpoint<sup><i class="fa fa-external-link"></i></sup></a>
+            </span>
+          </div>
+          <div style="float:right; margin-left:50px;">
+            <span style="color:#f94;">Ruby net</span>
+            <label class="switch">
+              <input type="checkbox" id="network">
+              <span class="slider round"></span>
+            </label>
+            <span style="color:#8bf;">Main net</span>
+          </div>
+        </div>
+        <table class="table table-dark col-xl-1 col-lg-9 col-md-9 col-sm-9" id="oracles" style="min-width:1150px;">
+          <thead class="thead-dark">
+            <tr>
+              <th scope="col">OracleId</th>
+              <th scope="col">Name</th>
+              <th scope="col">Info</th>
+              <th scope="col">Price
+                <i title="Price per request" class="fa fa-question-circle-o" style="padding-left:10px;"></i>
+              </th>
+              <th scope="col">Statistics 
+                <i title="# Successful requests / # All requests" class="fa fa-question-circle-o" style="padding-left:10px;"></i>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+
+          </tbody>
+        </table>
+      </section>
+
+      <!--  footer -->
+      <footer>
+         <div class="footer">
+            <div class="container">
+               <div class="row">
+                  <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6">
+                     <ul class="social_icon">
+                        <li><a href="https://github.com/EmelyanenkoK/OracleHub"><i class="fa fa-github" aria-hidden="true"></i></a></li>
+                        <li><a href="telegram://rulon"><i class="fa fa-telegram" aria-hidden="true"></i></a></li>
+                     </ul>
+                  </div>
+                  <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6">
+                     <h3>About Us</h3>
+                     <ul class="about_us">
+                        <li><a href="toncenter.com" style="color:white;">TonCenter</a> is one of the pioneers of TON ecosystem builders.</li>
+                     </ul>
+                  </div>
+                  <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6">
+                     <h3>Contact Us</h3>
+                     <ul class="conta">
+                        <li>Telegram @rulon</li>
+                     </ul>
+                  </div>
+                  <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6">
+                  </div>
+               </div>
+            </div>
+            <div class="copyright">
+               <div class="container">
+                  <div class="row">
+                     <div class="col-md-12">
+                        <p>2019 Design by<a href="https://html.design/"> html.design</a></br>
+                           2020 Animation by <a href="https://lottiefiles.com/user/22276">Nazaryan</a> and <a href="https://lottiefiles.com/raj">Mr.Futuristic</a></br>
+                           2020 Svg icons by <a href="https://www.flaticon.com/authors/freepik"> FreePic</a>, <a href="https://www.flaticon.com/authors/ultimatearm">ultimatearm</a> and <a href="https://www.flaticon.com/authors/smashicons"> smashicons</a> from flaticon.</p>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </footer>
+      <!-- end footer -->
+      <!-- Javascript files-->
+      <script src="js/jquery.min.js"></script>
+      <script src="js/popper.min.js"></script>
+      <script src="js/bootstrap.bundle.min.js"></script>
+      <script src="js/jquery-3.0.0.min.js"></script>
+
+
+      <script src="https://unpkg.com/@lottiefiles/lottie-player@0.2.0/dist/lottie-player.js"></script>
+      <!-- sidebar -->
+      <script src="js/jquery.mCustomScrollbar.concat.min.js"></script>
+      <script src="js/custom.js"></script>
+      <script src="js/tonweb.js"></script>
+      <script src="js/oracles.js"></script>
+
+   </body>
+</html>
+
