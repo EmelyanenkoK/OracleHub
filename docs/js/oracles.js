@@ -55,7 +55,9 @@ const loadOracles = async (network) => {
 
 const updateTable = async () => {
   const network = document.getElementById("network").checked? "freeton" : "ruby";
-
+  document.getElementById("contractAddress").innerHTML = networks[network].hub;
+  const tonlivePrefix = network == "ruby" ? "net" : "main";
+  document.getElementById("contractAddress").href = `https://${tonlivePrefix}.ton.live/accounts?section=details&id=${networks[network].hub}`
   const table = document.getElementById("oracles");
   while(table.rows.length>1)
     table.deleteRow(1);
