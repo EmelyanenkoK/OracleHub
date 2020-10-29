@@ -61,3 +61,29 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
+
+@media only screen and (max-width: 500px) {
+             td.semi-collapsable {display:none; }
+             th.semi-collapsable {display:none; }
+}
+
+@media only screen and (max-width: 900px) {
+             td.collapsable {display:none; }
+             th.collapsable {display:none; }
+}
+
+@media only screen and (min-width: 900px) {
+             .responsive-header {font-size:x-large; }
+}
+
+#contractAddress {
+  max-width:80vw;
+  text-overflow:ellipsis;
+  overflow: hidden !important;
+  display: inline-block;
+  color: white;
+}
+
+#contractAddress:link {
+  text-decoration: underline!important; 
+}
