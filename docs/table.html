@@ -71,10 +71,9 @@
       <!-- end header -->
       <!-- banner -->
       <section class="banner_main" style="display:grid;">
-        <div class="row col-xl-9 col-lg-9 col-md-9 col-sm-9" style="color:#fff;font-size:x-large;">
-            <row>
-                <a href="" id ="contractAddress" target="_blank"></a>
-            </row>
+        <div class="responsive-header" style="color:#fff;">
+            <a href="" id ="contractAddress" target="_blank" ></a>
+          </br>
           <div  class="">
             <span style="">
               Live contract data via 
@@ -90,13 +89,13 @@
             <span style="color:#8bf;">Main net</span>
           </div>
         </div>
-        <table class="table table-dark col-xl-1 col-lg-9 col-md-9 col-sm-9" id="oracles" style="min-width:1150px;">
+        <table class="table table-dark col-xl-1 col-lg-9 col-md-9 col-sm-9" id="oracles" style="">
           <thead class="thead-dark">
             <tr>
               <th scope="col">OracleId</th>
-              <th scope="col">Name</th>
-              <th scope="col">Info</th>
-              <th scope="col">Price
+              <th scope="col" class="semi-collapsable">Name</th>
+              <th scope="col" class="collapsable">Info</th>
+              <th scope="col" class="collapsable">Price
                 <i title="Price per request" class="fa fa-question-circle-o" style="padding-left:10px;"></i>
               </th>
               <th scope="col">Statistics 

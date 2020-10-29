@@ -86,6 +86,9 @@ const updateTable = async () => {
     }
     priceCell.innerHTML = String(oracleParams.pricePerRequest/1e9) + " TON Crystals";
     statsCell.innerHTML = String(oracleParams.successRequestNum) + " / " + String(oracleParams.totalRequestNum);
+    nameCell.classList.add("semi-collapsable");
+    infoCell.classList.add("collapsable");
+    priceCell.classList.add("collapsable");
   }
 }
 updateTable();
