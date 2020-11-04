@@ -39,8 +39,7 @@
 }
 
 input:checked + .slider {
-  background-color: #bbb; 
-  // #2196F3
+  background-color: #2196F3;
 }
 
 input:focus + .slider {
@@ -81,9 +80,26 @@ input:checked + .slider:before {
   text-overflow:ellipsis;
   overflow: hidden !important;
   display: inline-block;
-  color: white;
+}
+.longHex {
+  max-width:50vw;
+  text-overflow:ellipsis;
+  overflow: hidden !important;
+  display: inline-block;
+  word-wrap: break-word;
 }
 
-#contractAddress:link {
+.longHeader {
+  max-width:35vw;
+  text-overflow:ellipsis;
+  overflow: hidden !important;
+  display: inline-block;
+}
+
+.underlined {
   text-decoration: underline!important; 
+}
+
+.white {
+  color: #ffffff;
 }

@@ -1,7 +1,7 @@
 const t = new TonWeb();
 const networks = {ruby: {server:'net', hub:'0:d1f41263f18e3b0e10a9bd531ba0df671a60141081273a2c81a110dd1f2afa5a'},
                     testnet: {server:'testnet', hub:'0:bc2b1afd7b59a288293e2b72d43ed02c50c3421f09c46ac34544e5a3f4b6c152'},
-                    freeton: {server:'main', hub:'0:bc2b1afd7b59a288293e2b72d43ed02c50c3421f09c46ac34544e5a3f4b6c152'}
+                    freeton: {server:'main', hub:'0:42bd8b64ce188e7f59751c4f71e69f6a909e5e87c83741314b63605a8103a011'}
                    };
 
 
@@ -53,6 +53,39 @@ const loadOracles = async (network) => {
   return parsedDict;
 }
 
+const fillOracleDetails = (oracleId, details) => {
+  let table = document.getElementById("oracleDetails");
+  while(table.rows.length>0)
+    table.deleteRow(0);  
+  console.log(oracleId, details);
+  //pk
+  let row = table.insertRow();
+  let h = row.insertCell(), v = row.insertCell();
+  h.innerHTML = "Public key";
+  v.innerHTML = details.publicKey.toHex();
+  v.classList.add("longHex");
+  for(let i of ["balance", "pricePerRequest"]) {
+    row = table.insertRow();
+    h = row.insertCell(), v = row.insertCell();
+    h.innerHTML = i;
+    h.classList.add("longHeader");
+    v.innerHTML = `${details[i]/1e9} TON Crystalls`;
+  }
+  for(let i of ["seqNo", "successRequestNum", "totalRequestNum"]) {
+    row = table.insertRow();
+    h = row.insertCell(), v = row.insertCell();
+    h.innerHTML = i;
+    h.classList.add("longHeader");
+    v.innerHTML = `${details[i]}`;
+  }
+  row = table.insertRow();
+  h = row.insertCell(), v = row.insertCell();
+  h.innerHTML = "timeout";
+  v.innerHTML = `${details.timeout} sec`;
+  table.style.display="block";
+  
+};
+
 const updateTable = async () => {
   const network = document.getElementById("network").checked? "freeton" : "ruby";
   document.getElementById("contractAddress").innerHTML = networks[network].hub;
@@ -89,6 +122,7 @@ const updateTable = async () => {
     nameCell.classList.add("semi-collapsable");
     infoCell.classList.add("collapsable");
     priceCell.classList.add("collapsable");
+    row.addEventListener("click",()=>fillOracleDetails(oracle_id, oracleParams));
   }
 }
 updateTable();
