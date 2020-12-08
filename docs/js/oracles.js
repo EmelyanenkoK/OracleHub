@@ -1,5 +1,5 @@
 const t = new TonWeb();
-const networks = {ruby: {server:'net', hub:'0:d1f41263f18e3b0e10a9bd531ba0df671a60141081273a2c81a110dd1f2afa5a'},
+const networks = {ruby: {server:'net', hub:'0:731417792a258afec8696ccf0e1490025a6a3c296e9d107b355e1c6667b5dc34'},
                     testnet: {server:'testnet', hub:'0:bc2b1afd7b59a288293e2b72d43ed02c50c3421f09c46ac34544e5a3f4b6c152'},
                     freeton: {server:'main', hub:'0:42bd8b64ce188e7f59751c4f71e69f6a909e5e87c83741314b63605a8103a011'}
                    };

@@ -6,7 +6,7 @@ $1 parse-int =: public_key
 $2 parse-int =: price_per_request
 $3 parse-int =: timeout
 
-1 =: op
+501 =: op
 <b op 32 u, public_key 256 u, price_per_request Gram, timeout 16 u, b>
 2 boc+>B
 "register_oracle.boc" tuck B>file

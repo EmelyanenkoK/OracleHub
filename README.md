@@ -11,8 +11,14 @@ How it works?
 5. Once external message reaches OracleHub, authentication is checked and if everything is ok, smart-contract from step one gets internal message with data and oracle get money to its OracleHub account.
 
 # OracleHub contract
-OracleHub contract is deployed on:
-`0:bc2b1afd7b59a288293e2b72d43ed02c50c3421f09c46ac34544e5a3f4b6c152`
+OracleHub contract is deployed on rubynet and freeton mainnet, although you may deploy your own one:
+
+FreeTON mainnet `0:0:42bd8b64ce188e7f59751c4f71e69f6a909e5e87c83741314b63605a8103a011`
+
+rubynet `0:731417792a258afec8696ccf0e1490025a6a3c296e9d107b355e1c6667b5dc34`
+
+# OracleHub consumer
+In directory `./consumer` example Solidity contract which can be used to retrieve oracle data is presented.
 
 # Oracle Server
 Instruction for setup your own oracle may be found in `./oracle_server`

@@ -7,7 +7,7 @@ $2 parse-int =: query_id
 $3 =: request
 
 
-2 =: op
+502 =: op
 <b op 32 u, query_id 64 u, oracle_id 32 u, request $, b>
 2 boc+>B
 "send_request.boc" tuck B>file
