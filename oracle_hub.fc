@@ -58,8 +58,7 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
                         .store_slice(address)
                         .store_grams(sum)
                         .store_uint (0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
-                        .store_uint (0, 32)
-                        .store_slice (message)
+                        .store_slice (message) ;; TODO check message size
            .end_cell();
   send_raw_message(msg, 2);
 }
@@ -120,6 +119,10 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
 (int) pack_internal_query_id( int query_id, slice s_addr) {
   int addr_hash = (slice_hash(s_addr) >> 224);
   return (addr_hash << 64 ) + query_id;
+}
+
+(int) get_external_query_id( int internal_query_id ) inline {
+  return internal_query_id & 0xffffffffffffffff;
 }
 
 () consider_request(int oracle_id, int internal_query_id, int msg_value, slice requester_address) impure inline {
@@ -193,7 +196,7 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
     return(); ;; simple money transfer
   }
 
-  if(op == 1) { ;; register_oracle
+  if(op == 501) { ;; register_oracle
     int pubkey = in_msg~load_uint(256);
     int price_per_request = in_msg~load_grams();
     throw_unless(58, price_per_request > 10000000);
@@ -202,7 +205,7 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
     log_oracle_id(oracle_id, pubkey);
     return ();
   }
-  if(op == 2) { ;; get_data
+  if(op == 502) { ;; request_data
     (int query_id, int oracle_id) = (in_msg~load_uint(64), in_msg~load_uint(32));  
     slice s_addr = cs~load_msg_addr();
     int internal_query_id = pack_internal_query_id(query_id, s_addr);
@@ -210,18 +213,18 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
     log_request(oracle_id, internal_query_id, in_msg);
     return ();
   }
-  if(op == 3) { ;; top_up_oracle
+  if(op == 503) { ;; top_up_oracle
     int oracle_id = in_msg~load_uint(32);    
     top_up_oracle(oracle_id, msg_value);
     return ();
   }
-  if(op == 4) { ;; claim_unprovided_data
-    (int query_id, int oracle_id) = (in_msg~load_uint(64), in_msg~load_uint(32));  
+  if(op == 504) { ;; claim_unprovided_data
+    (int handler, int query_id, int oracle_id) = (in_msg~load_uint(32), in_msg~load_uint(64), in_msg~load_uint(32));  
     slice s_addr = cs~load_msg_addr();
     int internal_query_id = pack_internal_query_id(query_id, s_addr);
     int return_amount = withdraw_request(internal_query_id);
     slice return_message = begin_cell()
-                                       .store_uint(4 & 2147483648, 32) ;; 2147483648 = 2^31
+                                       .store_uint(handler, 32) ;; 2147483648 = 2^31
                                        .store_uint(query_id, 64)
                            .end_cell().begin_parse();
     send_response_msg(s_addr, return_amount, return_message);
@@ -295,7 +298,8 @@ slice pack_request_data (int oracle_id, int return_grams, int fee, int expiratio
       } else {
         (int oracle_id, int return_amount, int fee, int expiration_time, slice requester_address) = unpack_request_data(request_data);
         accept_message ();
-        send_response_msg(requester_address, return_amount, cs);
+        slice response = begin_cell().store_uint(get_external_query_id(internal_query_id), 64).store_slice(cs).end_cell().begin_parse();
+        send_response_msg(requester_address, return_amount, response);
         balance += fee;
         total_request_num += 1; 
         success_request_num += 1;

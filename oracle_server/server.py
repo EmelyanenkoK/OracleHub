@@ -8,7 +8,7 @@ import nacl.signing
 from time import sleep, time
 
 default_network_params = {
-  "hub": "0:d1f41263f18e3b0e10a9bd531ba0df671a60141081273a2c81a110dd1f2afa5a",
+  "hub": "0:731417792a258afec8696ccf0e1490025a6a3c296e9d107b355e1c6667b5dc34",
   "endpoint": 'net.ton.dev'
 }
 
